@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // ---- 編譯目標 ----
+    "target": "ES2022",                 // 編譯後輸出的 JS 語法版本
+    "module": "NodeNext",               // 模組系統（Node.js 現代寫法）
+    "moduleResolution": "NodeNext",     // 找 import 檔案的規則
+    "lib": ["ES2022"],                  // 可用的內建 API 型別（前端要再加 "DOM"）
+    "types": ["node"],                  // 載入 Node.js 的型別（console、process、fs…）
+
+    // ---- 輸出 ----
+    "outDir": "./dist",                 // tsc 編譯結果放哪
+    "rootDir": "./src",                 // 原始碼根目錄
+    "sourceMap": true,                  // 產生 source map，方便 debug
+
+    // ---- 嚴格模式：學習期一定要開，這是 TS 的價值所在 ----
+    "strict": true,                     // 一次打開下面所有嚴格檢查
+    "noUncheckedIndexedAccess": true,   // arr[0] 會被視為「可能是 undefined」
+    "noImplicitOverride": true,
+
+    // ---- 開發體驗 ----
+    "skipLibCheck": true,               // 不檢查 node_modules 的型別，加快編譯
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true             // 允許 import express from 'express'
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

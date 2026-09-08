@@ -1,0 +1,19 @@
+{
+  "name": "ts-learning",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "TypeScript 從 JavaScript 轉換的練習專案",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "run:01": "tsx src/01-basics.ts",
+    "run:ex01": "tsx src/01-exercise.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.6.0"
+  }
+}
