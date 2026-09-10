@@ -147,17 +147,23 @@ const wrongType: string[] = pluck(rolls, 'weightKg');
  */
 
 // ---- 你的答案 ----
-// 用路線A
-  interface Record<>{
-    
+// 用路線A,我選擇在編譯期檔住的原因是系統會自動做檢查,會比人工檢查多一點保障,選擇路線B的話系統不會自己擱置,也許會直接把number轉換成string,那就不會正確判斷
+  function groupBy<T extends Record<k,string>,k extends string>(arr:T[],key:k):Record<string,T[]>{
+    return arr.reduce((acc,item)=>{
+      const keyName=item[key]
+      if(!acc[keyName]){
+        acc[keyName]=[]
+      }
+      acc[keyName].push(item);
+      return acc
+    },{}as Record<string,T[]>)
   }
-  type Result<K,E=[]>={ok:true,value:K}|{ok:false,value:E}
-
-  // function groupBy<T,K extends keyof T>(obj:T,key:K):Result<Record>{}未寫完
+  
 
 // ---- 驗收測試（寫完拿掉註解）----
-/*
+// /*
 const byZone = groupBy(rolls, 'zoneCode');
+console.log(byZone)
 console.log(byZone['A-01']?.length);  // 2
 console.log(byZone['B-03']?.length);  // 1
 
@@ -167,7 +173,7 @@ console.log(Object.keys(byArea));      // ['針織一廠', '針織二廠']
 // 如果你走路線 A，下面這行應該報錯，請把註解打開：
 // // @ts-expect-error weightKg 不是字串欄位
 // groupBy(rolls, 'weightKg');
-*/
+// */
 
 // ============================================================
 // Q4 — sumBy
@@ -191,6 +197,7 @@ console.log(Object.keys(byArea));      // ['針織一廠', '針織二廠']
  */
 
 // ---- 你的答案 ----
+
 
 // ---- 驗收測試（寫完拿掉註解）----
 /*
