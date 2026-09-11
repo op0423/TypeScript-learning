@@ -28,7 +28,7 @@ interface FabricRoll {
   rollNo: string;
   weightKg: number;
   zoneCode: string;
-  status: 'IN_STOCK' | 'SHIPPED' | 'HOLD';
+  status: "IN_STOCK" | "SHIPPED" | "HOLD";
 }
 
 interface Machine {
@@ -39,15 +39,33 @@ interface Machine {
 }
 
 const rolls: FabricRoll[] = [
-  { _id: '1', rollNo: 'R001', weightKg: 25.5, zoneCode: 'A-01', status: 'IN_STOCK' },
-  { _id: '2', rollNo: 'R002', weightKg: 30.0, zoneCode: 'A-01', status: 'SHIPPED' },
-  { _id: '3', rollNo: 'R003', weightKg: 18.2, zoneCode: 'B-03', status: 'IN_STOCK' },
+  {
+    _id: "1",
+    rollNo: "R001",
+    weightKg: 25.5,
+    zoneCode: "A-01",
+    status: "IN_STOCK",
+  },
+  {
+    _id: "2",
+    rollNo: "R002",
+    weightKg: 30.0,
+    zoneCode: "A-01",
+    status: "SHIPPED",
+  },
+  {
+    _id: "3",
+    rollNo: "R003",
+    weightKg: 18.2,
+    zoneCode: "B-03",
+    status: "IN_STOCK",
+  },
 ];
 
 const machines: Machine[] = [
-  { _id: 'm1', machineNo: 'K-01', efficiency: 92.5, area: '針織一廠' },
-  { _id: 'm2', machineNo: 'K-02', efficiency: 88.0, area: '針織一廠' },
-  { _id: 'm3', machineNo: 'K-03', efficiency: 95.1, area: '針織二廠' },
+  { _id: "m1", machineNo: "K-01", efficiency: 92.5, area: "針織一廠" },
+  { _id: "m2", machineNo: "K-02", efficiency: 88.0, area: "針織一廠" },
+  { _id: "m3", machineNo: "K-03", efficiency: 95.1, area: "針織二廠" },
 ];
 
 // ============================================================
@@ -62,8 +80,8 @@ const machines: Machine[] = [
  */
 
 // ---- 你的答案 ----
-function last<T>(arr :T[]):T | undefined {
-  return arr[arr.length-1]
+function last<T>(arr: readonly T[]): T | undefined {
+  return arr[arr.length - 1];
 }
 
 // ---- 驗收測試（寫完拿掉註解）----
@@ -95,9 +113,9 @@ console.log(lastNum);
  */
 
 // ---- 你的答案 ----
-  function pluck<T ,K extends keyof T>(object:T , key:K):T[K]{
-    return object[key]
-  }
+function pluck<T, K extends keyof T>(object: T, key: K): T[K] {
+  return object[key];
+}
 
 // ---- 驗收測試（寫完拿掉註解）----
 /*
@@ -148,27 +166,32 @@ const wrongType: string[] = pluck(rolls, 'weightKg');
 
 // ---- 你的答案 ----
 // 用路線A,我選擇在編譯期檔住的原因是系統會自動做檢查,會比人工檢查多一點保障,選擇路線B的話系統不會自己擱置,也許會直接把number轉換成string,那就不會正確判斷
-  function groupBy<T extends Record<k,string>,k extends string>(arr:T[],key:k):Record<string,T[]>{
-    return arr.reduce((acc,item)=>{
-      const keyName=item[key]
-      if(!acc[keyName]){
-        acc[keyName]=[]
+function groupBy<T extends Record<k, string>, k extends string>(
+  arr: T[],
+  key: k,
+): Record<string, T[]> {
+  return arr.reduce(
+    (acc, item) => {
+      const keyName = item[key];
+      if (!acc[keyName]) {
+        acc[keyName] = [];
       }
       acc[keyName].push(item);
-      return acc
-    },{}as Record<string,T[]>)
-  }
-  
+      return acc;
+    },
+    {} as Record<string, T[]>,
+  );
+}
 
 // ---- 驗收測試（寫完拿掉註解）----
 // /*
-const byZone = groupBy(rolls, 'zoneCode');
-console.log(byZone)
-console.log(byZone['A-01']?.length);  // 2
-console.log(byZone['B-03']?.length);  // 1
+const byZone = groupBy(rolls, "zoneCode");
+// console.log(byZone)
+console.log(byZone["A-01"]?.length); // 2
+console.log(byZone["B-03"]?.length); // 1
 
-const byArea = groupBy(machines, 'area');
-console.log(Object.keys(byArea));      // ['針織一廠', '針織二廠']
+const byArea = groupBy(machines, "area");
+console.log(Object.keys(byArea)); // ['針織一廠', '針織二廠']
 
 // 如果你走路線 A，下面這行應該報錯，請把註解打開：
 // // @ts-expect-error weightKg 不是字串欄位
@@ -197,23 +220,29 @@ console.log(Object.keys(byArea));      // ['針織一廠', '針織二廠']
  */
 
 // ---- 你的答案 ----
-
+// 約束T[K]本身要是number,string則直接擋掉
+function sumBy<T extends Record<K, number>, K extends string>(
+  arr: T[],
+  key: K,
+): number {
+  return arr.reduce((total, item) => total + item[key], 0);
+}
 
 // ---- 驗收測試（寫完拿掉註解）----
-/*
-const totalWeight: number = sumBy(rolls, 'weightKg');
-const totalEff: number = sumBy(machines, 'efficiency');
+
+const totalWeight: number = sumBy(rolls, "weightKg");
+const totalEff: number = sumBy(machines, "efficiency");
 console.log(totalWeight.toFixed(1), totalEff.toFixed(1));
 
 // @ts-expect-error rollNo 是 string，不能加總
-sumBy(rolls, 'rollNo');
+sumBy(rolls, "rollNo");
 
 // @ts-expect-error status 是字串聯合，不能加總
-sumBy(rolls, 'status');
+sumBy(rolls, "status");
 
 // @ts-expect-error 欄位根本不存在
-sumBy(rolls, 'weight');
-*/
+sumBy(rolls, "weight");
+// */
 
 // ============================================================
 // Q5 — Result<T, E> 實戰
@@ -240,6 +269,58 @@ sumBy(rolls, 'weight');
  */
 
 // ---- 你的答案（含 Result 型別、錯誤型別、moveRoll、呼叫端）----
+// const rolls: FabricRoll[] = [
+//   {
+//     _id: "1",
+//     rollNo: "R001",
+//     weightKg: 25.5,
+//     zoneCode: "A-01",
+//     status: "IN_STOCK",
+//   },
+//   {
+//     _id: "2",
+//     rollNo: "R002",
+//     weightKg: 30.0,
+//     zoneCode: "A-01",
+//     status: "SHIPPED",
+//   },
+//   {
+//     _id: "3",
+//     rollNo: "R003",
+//     weightKg: 18.2,
+//     zoneCode: "B-03",
+//     status: "IN_STOCK",
+//   },
+// ];
+
+type MoveRollError =
+  | { message: "ROLLNO_NOT_FOUND"; rollNo: string }
+  | { message: "ALREADY_SHIPPED"; rollNo: string }
+  | { message: "ALREADY_IN_ZONE"; rollNo: string; zoneCode: string };
+
+type Result<T, E = string> = { ok: true; value: T } | { ok: false; error: E };
+
+function moveRoll(
+  roll: readonly [],
+  rollNo: string,
+  toLocation: string,
+): Result<roll, MoveRollError> {
+  const found = rolls.find((r) => r.rollNo === rollNo);
+  if (!found) {
+    return { ok: false, error: { message: "ROLLNO_NOT_FOUND", rollNo } };
+  }
+  if (found.status == "SHIPPED") {
+    return { ok: false, error: { message: "ALREADY_SHIPPED", rollNo } };
+  }
+  if (found.zoneCode === toLocation) {
+    return {
+      ok: false,
+      error: { message: "ALREADY_IN_ZONE", rollNo, zoneCode: found.zoneCode },
+    };
+  }
+  found.zoneCode = toLocation;
+  return { ok: true, value: found };
+}
 
 // ============================================================
 // Q6 — 觀念題（答案直接寫在下方註解裡）
@@ -282,13 +363,17 @@ sumBy(rolls, 'weight');
  */
 
 // ---- 你的答案 ----
-// (a) 問題：
-//     修正：
+// (a) 問題：未處理undefined的情況
+//     修正：function toArray<T>(value: any): T[] | undefined {
+//            return [value];
+//             }
 //
 // (b) 問題：
 //     修正：
 //
-// (c) 問題：
-//     修正：
+// (c) 問題：僅需要直接宣告即可,這樣繞沒有意義
+//     修正： function formatWeight(weight: number): string {
+//  return `${weight.toFixed(2)} kg`;
+// }
 
 export {};
