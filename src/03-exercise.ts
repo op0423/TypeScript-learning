@@ -304,7 +304,7 @@ function moveRoll(
   roll: readonly [],
   rollNo: string,
   toLocation: string,
-): Result<roll, MoveRollError> {
+): Result<FabricRoll, MoveRollError> {
   const found = rolls.find((r) => r.rollNo === rollNo);
   if (!found) {
     return { ok: false, error: { message: "ROLLNO_NOT_FOUND", rollNo } };
