@@ -18,12 +18,24 @@ interface FabricRoll {
   rollNo: string;
   weightKg: number;
   zoneCode: string;
-  status: 'IN_STOCK' | 'SHIPPED' | 'HOLD';
+  status: "IN_STOCK" | "SHIPPED" | "HOLD";
 }
 
 const rolls: FabricRoll[] = [
-  { _id: '1', rollNo: 'R001', weightKg: 25.5, zoneCode: 'A-01', status: 'IN_STOCK' },
-  { _id: '2', rollNo: 'R002', weightKg: 30.0, zoneCode: 'A-01', status: 'SHIPPED' },
+  {
+    _id: "1",
+    rollNo: "R001",
+    weightKg: 25.5,
+    zoneCode: "A-01",
+    status: "IN_STOCK",
+  },
+  {
+    _id: "2",
+    rollNo: "R002",
+    weightKg: 30.0,
+    zoneCode: "A-01",
+    status: "SHIPPED",
+  },
 ];
 
 // ============================================================
@@ -52,16 +64,16 @@ const rolls: FabricRoll[] = [
  */
 
 // ---- 你的答案 ----
-// ★1:
-// ★2:
-// ★3:
-// ★4:
-// ★5:
-// ★6:
-// ★7:
-// ★8:
-// ★9:
-// ★10:
+// ★1:型別世界
+// ★2:型別世界
+// ★3:值世界
+// ★4:值世界
+// ★5:型別世界
+// ★6:型別世界
+// ★7:型別世界
+// ★8:型別世界
+// ★9:值世界
+// ★10:型別世界
 
 // ============================================================
 // Q2 — 修錯（三段都有跨世界的錯誤）
@@ -100,14 +112,26 @@ const rolls: FabricRoll[] = [
  */
 
 // ---- 你的答案 ----
-// (a) 問題：
-//     修正：
+// (a) 問題： readonly {} 在型態世界這樣寫是讀空物件而已
+//     修正：function summarize(items: readonly FabricRoll{}, label: string): string {
+//            return `${label}: ${items.length} 筆`;
+//           }
 //
-// (b) 問題：
+// (b) 問題：roll: FabricRoll會讀取的是這個物件的method(pop、length、push....)
+//     修正：function assignZone(roll: FabricRoll{}, zone: DEFAULT_ZONE): FabricRoll {
+//            return { ...roll, zoneCode: zone };
+//          }
+// (c) 問題：interface在編譯期會直接消失
 //     修正：
-//
-// (c) 問題：
-//     修正：
+          //  function isPallet(x: unknown): x is Pallet {
+          //  return (
+          //    typeof x === 'object' && //
+          //    x !== null && // typeof null === 'object'，
+          //    'palletNo' in x &&
+          //    typeof (x as Pallet).palletNo === 'string'&&
+          //      typeof (x as Pallet).rolls === FabricRoll[];
+          //    );
+          // }
 
 // ============================================================
 // Q3 — 用 typeof 消除重複維護
@@ -124,9 +148,9 @@ const rolls: FabricRoll[] = [
  */
 
 const dbConfig = {
-  host: 'localhost',
+  host: "localhost",
   port: 27017,
-  dbName: 'wms',
+  dbName: "wms",
   retryWrites: true,
 };
 
@@ -139,7 +163,11 @@ interface DbConfigManual {
 }
 
 // ---- 你的答案 ----
-
+ type newDbConfigManual = typeof dbConfig;
+  function printConfig(config: newDbConfigManual):void{
+    console.log(config)
+  };
+// 這樣寫的代價大概是若有人更改了某一欄位的值,且不符合我們規定的型態,那會報錯(型態錯誤)
 // ============================================================
 // Q4 — as const + 索引存取
 // ============================================================
@@ -157,9 +185,14 @@ interface DbConfigManual {
  *   (d) 驗證：傳一個不在清單裡的字串進去要編譯錯誤
  */
 
-const ROLL_STATUSES = ['IN_STOCK', 'SHIPPED', 'HOLD', 'SCRAPPED'];
+// const ROLL_STATUSES = ["IN_STOCK", "SHIPPED", "HOLD", "SCRAPPED"];
 
 // ---- 你的答案 ----
+const ROLL_STATUSES = ["IN_STOCK", "SHIPPED", "HOLD", "SCRAPPED"] as const;
+type RollStatus = (typeof ROLL_STATUSES)[number];
+function isFinalStatus(status: RollStatus): boolean {
+  return status === "SHIPPED" || status === "SCRAPPED";
+}
 
 // ---- 驗收測試（寫完拿掉註解）----
 /*
@@ -226,7 +259,7 @@ console.log(isFabricRoll({ ...rolls[0], status: 'FLYING' }));  // false（status
  */
 
 // ---- 你的答案 ----
-// (a)
+// (a)因為interface在型態世界是存在的但在編譯期間就會消失,而class是兩個世界都有
 // (b)
 // (c)
 
