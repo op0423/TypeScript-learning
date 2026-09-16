@@ -123,15 +123,15 @@ const rolls: FabricRoll[] = [
 //          }
 // (c) 問題：interface在編譯期會直接消失
 //     修正：
-          //  function isPallet(x: unknown): x is Pallet {
-          //  return (
-          //    typeof x === 'object' && //
-          //    x !== null && // typeof null === 'object'，
-          //    'palletNo' in x &&
-          //    typeof (x as Pallet).palletNo === 'string'&&
-          //      typeof (x as Pallet).rolls === FabricRoll[];
-          //    );
-          // }
+//  function isPallet(x: unknown): x is Pallet {
+//  return (
+//    typeof x === 'object' && //
+//    x !== null && // typeof null === 'object'，
+//    'palletNo' in x &&
+//    typeof (x as Pallet).palletNo === 'string'&&
+//      typeof (x as Pallet).rolls === FabricRoll[];
+//    );
+// }
 
 // ============================================================
 // Q3 — 用 typeof 消除重複維護
@@ -163,10 +163,10 @@ interface DbConfigManual {
 }
 
 // ---- 你的答案 ----
- type newDbConfigManual = typeof dbConfig;
-  function printConfig(config: newDbConfigManual):void{
-    console.log(config)
-  };
+type newDbConfigManual = typeof dbConfig;
+function printConfig(config: newDbConfigManual): void {
+  console.log(config);
+}
 // 這樣寫的代價大概是若有人更改了某一欄位的值,且不符合我們規定的型態,那會報錯(型態錯誤)
 // ============================================================
 // Q4 — as const + 索引存取
@@ -223,9 +223,31 @@ console.log(ROLL_STATUSES.map(s => s.toLowerCase()));
  * 提示：narrowing 的細節第 4 章才正式講，這題只要能跑就好，
  *       重點是體會「這座橋必須自己蓋」。
  */
-
+// interface FabricRoll {
+//   _id: string;
+//   rollNo: string;
+//   weightKg: number;
+//   zoneCode: string;
+//   status: "IN_STOCK" | "SHIPPED" | "HOLD";
+// }
 // ---- 你的答案 ----
-
+function isFabricRoll(x: unknown): x is FabricRoll {
+  return (
+    (typeof x === "object" && // ← 這裡是 JS 的 typeof（值世界）
+      x !== null && // typeof null === 'object'，第 1 章的坑
+      "rollNo" in x &&
+      typeof (x as FabricRoll).rollNo === "string" &&
+      "status" in x &&
+      typeof (x as FabricRoll).status === "string" &&
+      "weightKg" in x &&
+      typeof (x as FabricRoll).weightKg === "number" &&
+      "zoneCode" in x &&
+      typeof (x as FabricRoll).zoneCode === "string" &&
+      (x as FabricRoll).status == "IN_STOCK") ||
+    (x as FabricRoll).status == "HOLD" ||
+    (x as FabricRoll).status == "SHIPPED"
+  );
+}
 // ---- 驗收測試（寫完拿掉註解）----
 /*
 const fromApi: unknown = { _id: '9', rollNo: 'R009', weightKg: 20, zoneCode: 'C-01', status: 'IN_STOCK' };
@@ -260,7 +282,7 @@ console.log(isFabricRoll({ ...rolls[0], status: 'FLYING' }));  // false（status
 
 // ---- 你的答案 ----
 // (a)因為interface在型態世界是存在的但在編譯期間就會消失,而class是兩個世界都有
-// (b)
-// (c)
+// (b)會在執行時才會拋出錯誤,TypeScrript只是提供型態檢查但沒有限制型態所以不會報錯
+// (c)補的應該是在型態世界的洞
 
 export {};
