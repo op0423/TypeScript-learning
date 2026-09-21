@@ -192,21 +192,20 @@ type MachineEvent = RunEvent | StopEvent | DoffEvent | AlarmEvent;
  * 教材 4.7 可辨識聯合 + assertNever 窮舉檢查。
  */
 function eventSummary(e: MachineEvent): string {
- switch (e.type) {
-   case "RUN":
-     return `${e.machineNo} 運轉中 ${e.rpm} rpm`;
-   case "ROLL_DOFF":
-     return `${e.machineNo} 落布 ${e.rollNo} ${e.weightKg} kg`;
-   case "ALARM":
-     return e.level === "WARN"
-       ? `${e.machineNo} ⚠️ ${e.message}`
-       : `${e.machineNo} 🚨 ${e.message}`;
-   case "STOP":
-     return `${e.machineNo} 停機：${e.reason === "NEEDLE_BREAK" ? "斷針" : e.reason === "YARN_OUT" ? "缺紗" : e.reason === "MAINTENANCE" ? "保養" : "不明原因"}`;
-   default:
-     return "狀況不明";
- }
-
+  switch (e.type) {
+    case "RUN":
+      return `${e.machineNo} 運轉中 ${e.rpm} rpm`;
+    case "ROLL_DOFF":
+      return `${e.machineNo} 落布 ${e.rollNo} ${e.weightKg} kg`;
+    case "ALARM":
+      return e.level === "WARN"
+        ? `${e.machineNo} ⚠️ ${e.message}`
+        : `${e.machineNo} 🚨 ${e.message}`;
+    case "STOP":
+      return `${e.machineNo} 停機：${e.reason === "NEEDLE_BREAK" ? "斷針" : e.reason === "YARN_OUT" ? "缺紗" : e.reason === "MAINTENANCE" ? "保養" : "不明原因"}`;
+    default:
+      return "狀況不明";
+  }
 }
 
 /**
@@ -230,14 +229,16 @@ function eventSummary(e: MachineEvent): string {
  * - 寫完 filter 那一行之後，把游標停在 filter 的結果上，記下 TS 推論出來的型別是什麼，
  *   寫在下面這行註解裡（這是這題真正想讓你看到的東西）：
  *
- *   filter 之後的型別是：
+ *   filter 之後的型別是：(parameter) item: MachineEvent
  *
  * 【這題在練什麼】
  * 教材 4.9 最後一段：TS 5.5 之後，箭頭函式如果是在判斷辨識欄位，
  * 會自動被推論成型別守衛，所以 filter 的結果不需要你手寫 `as` 或 `is`。
  */
 function totalDoffWeight(events: readonly MachineEvent[]): number {
-  throw new Error("TODO");
+  return events
+    .filter((item) => item.type === "ROLL_DOFF")
+    .reduce((sum, itme) => sum + itme.weightKg, 0);
 }
 
 /**
@@ -280,7 +281,6 @@ interface YarnLot {
   supplierNo: string | null; // 可以是 null，但這個 key「必須存在」
   remark?: string; // 選填：可以不存在；存在的話必須是 string
 }
-
 /**
  * 【情境】
  * 前端呼叫後端 API 拿紗線批次資料。JSON.parse 出來的東西型別是 unknown，
@@ -335,7 +335,25 @@ interface YarnLot {
  * 你第 3 章的 isFabricRoll 因為運算子優先權讓壞資料通過了，這題就是那題的重寫版。
  */
 function isYarnLot(x: unknown): x is YarnLot {
-  throw new Error("TODO");
+  if (
+    typeof x === "object" &&
+    x !== null &&
+    "lotNo" in x &&
+    "yarnType" in x &&
+    "weightKg" in x &&
+    "supplierNo" in x
+  ) {
+    if (typeof x.lotNo !== "string") return false;
+    if (x.yarnType !== "COTTON" || "POLYESTER" || "NYLON") return false;
+    if (
+      typeof x.weightKg !== "number" ||
+      Number.isNaN(x.weightKg) ||
+      !Number.isFinite(x.weightKg)
+    )
+      return false;
+    if (x.supplierNo !== null && typeof x.supplierNo !== "string") return false;
+  }
+  return true;
 }
 
 /**
@@ -361,7 +379,7 @@ function isYarnLot(x: unknown): x is YarnLot {
  * 型別守衛傳進 filter 時，TS 會用謂詞幫整個陣列換型別。
  */
 function pickValidLots(items: readonly unknown[]): YarnLot[] {
-  throw new Error("TODO");
+ return items.map((i)=>typeof i ==="object" && i!==null ? i : undefined).filter((r)=>r!==undefined)
 }
 
 // ============================================================
