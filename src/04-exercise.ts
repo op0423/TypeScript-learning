@@ -109,12 +109,13 @@ function formatCellValue(v: string | number | Date | null | undefined): string {
     return v.toFixed(1);
   }
   if (typeof v == "string") {
-    if (v.trim() == " ") {
+    const t = v.trim();
+    if (t === "") {
       return "-";
     }
     return v;
   }
-  if (!new Date(v)) {
+  if (Number.isNaN(v.getTime())) {
     return "-";
   }
   return new Date(v).toISOString().slice(0, 10);
@@ -335,24 +336,29 @@ interface YarnLot {
  * 你第 3 章的 isFabricRoll 因為運算子優先權讓壞資料通過了，這題就是那題的重寫版。
  */
 function isYarnLot(x: unknown): x is YarnLot {
+  if (typeof x !== "object" || x === null) return false;
+  if (Array.isArray(x)) return false;
+  if (!("lotNo" in x) || typeof x.lotNo !== "string") return false;
   if (
-    typeof x === "object" &&
-    x !== null &&
-    "lotNo" in x &&
-    "yarnType" in x &&
-    "weightKg" in x &&
-    "supplierNo" in x
-  ) {
-    if (typeof x.lotNo !== "string") return false;
-    if (x.yarnType !== "COTTON" || "POLYESTER" || "NYLON") return false;
-    if (
-      typeof x.weightKg !== "number" ||
-      Number.isNaN(x.weightKg) ||
-      !Number.isFinite(x.weightKg)
-    )
-      return false;
-    if (x.supplierNo !== null && typeof x.supplierNo !== "string") return false;
-  }
+    !("yarnType" in x) ||
+    (x.yarnType !== "COTTON" &&
+      x.yarnType !== "POLYESTER" &&
+      x.yarnType !== "NYLON")
+  )
+    return false;
+  if (
+    !("weightKg" in x) ||
+    typeof x.weightKg !== "number" ||
+    Number.isNaN(x.weightKg) ||
+    !Number.isFinite(x.weightKg)
+  )
+    return false;
+  if (
+    !("supplierNo" in x) ||
+    (x.supplierNo !== null && typeof x.supplierNo !== "string")
+  )
+    return false;
+
   return true;
 }
 
@@ -379,8 +385,13 @@ function isYarnLot(x: unknown): x is YarnLot {
  * 型別守衛傳進 filter 時，TS 會用謂詞幫整個陣列換型別。
  */
 function pickValidLots(items: readonly unknown[]): YarnLot[] {
- return items.map((i)=>typeof i ==="object" && i!==null ? i : undefined).filter((r)=>r!==undefined)
+  return items.filter(isYarnLot);
 }
+// function pickValidLots(items: readonly unknown[]): YarnLot[] {
+//   return items
+//     .map((i) => (typeof i === "object" && i !== null ? i : undefined))
+//     .filter((r) => r !== undefined);
+// }
 
 // ============================================================
 // Q4 — 斷言函式（解析 API 回應）
@@ -410,7 +421,7 @@ function pickValidLots(items: readonly unknown[]): YarnLot[] {
  * 教材 4.10 斷言函式。
  */
 function assertYarnLot(x: unknown, index: number): asserts x is YarnLot {
-  throw new Error("TODO");
+  if (!isYarnLot(x)) throw new Error(`第 ${index + 1} 筆資料格式錯誤`);
 }
 
 /**
@@ -464,7 +475,25 @@ function assertYarnLot(x: unknown, index: number): asserts x is YarnLot {
  * 教材 4.10 斷言函式的實際用法，也是第 9 章 Express 驗證 req.body 的預習。
  */
 function parseYarnLotsResponse(body: unknown): YarnLot[] {
-  throw new Error("TODO");
+  if (typeof body !== "object" || Array.isArray(body) || body == null) {
+    throw new Error("回應格式錯誤");
+  } else if ("ok" in body && body.ok === false) {
+    const message = "message" in body ? body.message : "未知錯誤";
+    throw new Error(`API錯誤: ${message}`);
+  } else if ("ok" in body && body.ok !== "true") {
+    throw new Error("回應格式錯誤");
+  } else if ("data" in body && !Array.isArray(body.data)) {
+    throw new Error("data 不是陣列");
+  }
+  const output: YarnLot[] = [];
+  if ("data" in body && Array.isArray(body.data)) {
+    const data = body.data;
+    data.forEach((item, index) => {
+      assertYarnLot(item, index);
+      output.push(item);
+    });
+  }
+  return output;
 }
 
 /**
@@ -474,7 +503,7 @@ function parseYarnLotsResponse(body: unknown): YarnLot[] {
  * Q4(b) 用斷言函式（壞的就丟錯誤中止）。
  * 請說明：實務上你怎麼決定一個驗證要寫成哪一種？判斷的依據是什麼？
  *
- *   你的答案：
+ *   你的答案：如果此API處理的是屬於必填且非常敏感的問題則用斷言函式,反之如果此API是要做數量生成的函式或者篩選東西則用型別守衛
  */
 
 // ============================================================
@@ -509,9 +538,9 @@ void watchMachine;
  * 【這題在練什麼】教材 4.8 (2) 閉包裡的縮小。
  *
  *   你的答案：
- *   1.
- *   2.
- *   3.
+ *   1.machineNo' is possibly 'null'.
+ *   2.因為machineNo在下面被重新定義了machineNo = null
+ *   3.在TS5.4起若在封包裡已被縮小後還被重新指派就會出錯
  */
 
 // ---------- (b) ----------
@@ -554,9 +583,27 @@ void runShift;
  * 【這題在練什麼】教材 4.8 (3) TS 故意放過的洞。
  *
  *   你的答案：
- *   1.
- *   2.
- *   3.
+ *   1. {
+  machineNo: 1;
+  currentLot: YarnLot[0] ;
+}
+ *   2.因為TS會樂觀假設函式不會改它原本的型態
+ *   3.(i)  function runShift(m: Machine): string {
+ *            const lot=m.currentLot
+              if (lot === null) return "未上紗";
+              consumeYarn(m, 30);
+              return `批號 ${m.currentLot.lotNo} 剩 ${m.currentLot.weightKg} kg`;
+                }
+              void runShift;
+       (ii)function consumeYarn(m: Readonly <Machine>, kg: number): void {
+            if (m.currentLot === null) return;
+            const left = m.currentLot.weightKg - kg;
+            if (left <= 0) {
+             m.currentLot = null; // 紗用完，下架
+            } else {
+              m.currentLot = { ...m.currentLot, weightKg: left };
+            }
+}
  */
 
 // ---------- (c) ----------
@@ -596,8 +643,8 @@ void dispatchEvent;
  * 【這題在練什麼】教材 4.9「false 分支也會說謊」。
  *
  *   你的答案：
- *   1.
- *   2.
+ *   1.不會回傳任何東西
+ *   2.因為它在isCriticalAlarm直接被騙過去了(因為e is AlarmEvent)直接承諾了
  *   3.
  */
 
@@ -618,8 +665,8 @@ void fetchLots;
  * 【這題在練什麼】教材 4.11 as 不是縮小。
  *
  *   你的答案：
- *   1.
- *   2.
+ *   1.舉不出來
+ *   2.async function fetchLots(res:unknown): Promise<YarnLot[]>
  */
 
 // ============================================================
@@ -667,7 +714,12 @@ void fetchLots;
  *   - 你的型別擋住了 → 5 個 TS2578 全部消失，tsc 歸零
  * 也就是說，這題的評分者就是編譯器本身。
  */
-type ScanResult = unknown;
+type ScanResult = {
+  status: "Ok" | "RETRYABLE" | "FATAL";
+  roll?: FabricRoll;
+  errorCode?: string;
+  retryAfterSec?: number;
+};
 
 /**
  * 【你要做的】(b)
@@ -695,7 +747,13 @@ type ScanResult = unknown;
  * 設計對了之後你會發現 (b) 特別好寫：每個分支要用的欄位一定存在，不必寫任何防禦。
  */
 function scanMessage(r: ScanResult): string {
-  throw new Error("TODO");
+  if (r.status === "RETRYABLE") {
+    return `🔁 ${r.errorCode}，${r.retryAfterSec} 秒後重試`;
+  }
+  if (r.status === "FATAL") {
+    return `⛔ ${r.errorCode}，請人工處理`;
+  }
+  return `✅ ${r.roll}`;
 }
 
 // ---- Q6 型別驗收（不要改）：這 5 行都應該「是錯誤」，你的型別擋住了，@ts-expect-error 才不會報 TS2578 ----
