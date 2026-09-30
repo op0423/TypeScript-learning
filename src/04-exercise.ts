@@ -113,7 +113,7 @@ function formatCellValue(v: string | number | Date | null | undefined): string {
     if (t === "") {
       return "-";
     }
-    return v;
+    return t;
   }
   if (Number.isNaN(v.getTime())) {
     return "-";
@@ -358,6 +358,8 @@ function isYarnLot(x: unknown): x is YarnLot {
     (x.supplierNo !== null && typeof x.supplierNo !== "string")
   )
     return false;
+  if ("remark" in x && x.remark !== undefined && typeof x.remark !== "string")
+    return false;
 
   return true;
 }
@@ -479,8 +481,8 @@ function parseYarnLotsResponse(body: unknown): YarnLot[] {
     throw new Error("回應格式錯誤");
   } else if ("ok" in body && body.ok === false) {
     const message = "message" in body ? body.message : "未知錯誤";
-    throw new Error(`API錯誤: ${message}`);
-  } else if ("ok" in body && body.ok !== "true") {
+    throw new Error(`API錯誤:${message}`);
+  } else if ("ok" in body && body.ok !== true) {
     throw new Error("回應格式錯誤");
   } else if ("data" in body && !Array.isArray(body.data)) {
     throw new Error("data 不是陣列");
@@ -503,7 +505,7 @@ function parseYarnLotsResponse(body: unknown): YarnLot[] {
  * Q4(b) 用斷言函式（壞的就丟錯誤中止）。
  * 請說明：實務上你怎麼決定一個驗證要寫成哪一種？判斷的依據是什麼？
  *
- *   你的答案：如果此API處理的是屬於必填且非常敏感的問題則用斷言函式,反之如果此API是要做數量生成的函式或者篩選東西則用型別守衛
+ *   你的答案：判斷依據為批次處理時是否能容忍小單位錯誤,型別守衛(過濾篩選資料)可以而斷言函式不行(處理連續有相關性訂單)
  */
 
 // ============================================================
@@ -540,7 +542,7 @@ void watchMachine;
  *   你的答案：
  *   1.machineNo' is possibly 'null'.
  *   2.因為machineNo在下面被重新定義了machineNo = null
- *   3.在TS5.4起若在封包裡已被縮小後還被重新指派就會出錯
+ *   3.在TS5.4起變數在閉包建立之後沒有再被指派時，縮小結果才會保留進閉包。只要後面有任何一行指派它，縮小就作廢
  */
 
 // ---------- (b) ----------
@@ -583,19 +585,10 @@ void runShift;
  * 【這題在練什麼】教材 4.8 (3) TS 故意放過的洞。
  *
  *   你的答案：
- *   1. {
-  machineNo: 1;
-  currentLot: YarnLot[0] ;
-}
+ *   1.{ machineNo: 'K-01', currentLot: { lotNo: 'Y-1', yarnType: 'COTTON', weightKg: 20, supplierNo: null } }
  *   2.因為TS會樂觀假設函式不會改它原本的型態
- *   3.(i)  function runShift(m: Machine): string {
- *            const lot=m.currentLot
-              if (lot === null) return "未上紗";
-              consumeYarn(m, 30);
-              return `批號 ${m.currentLot.lotNo} 剩 ${m.currentLot.weightKg} kg`;
-                }
-              void runShift;
-       (ii)function consumeYarn(m: Readonly <Machine>, kg: number): void {
+ *   3.
+       (ii)function consumeYarn(m: Readonly <Machine>, kg: number): Machine {
             if (m.currentLot === null) return;
             const left = m.currentLot.weightKg - kg;
             if (left <= 0) {
@@ -643,9 +636,15 @@ void dispatchEvent;
  * 【這題在練什麼】教材 4.9「false 分支也會說謊」。
  *
  *   你的答案：
- *   1.不會回傳任何東西
- *   2.因為它在isCriticalAlarm直接被騙過去了(因為e is AlarmEvent)直接承諾了
- *   3.
+ *   1.丟出 Error：未處理的分支：{"type":"ALARM","machineNo":"K-01","level":"WARN","message":"溫度偏高"}
+ *   2.e is AlarmEvent 這個謂詞同時做了兩個承諾，回傳 true 時「是 AlarmEvent」，
+ *     回傳 false 時「不是 AlarmEvent」。WARN 警報回傳 false，
+ *     於是 TS 從 else 分支把 AlarmEvent 整個剔除了，switch 處理完剩下三種，
+ *     e 就變成 never，assertNever 當然不紅字。
+ *   3.function isAlarm(e: MachineEvent): e is AlarmEvent {
+  return e.type === "ALARM";
+}
+if (isAlarm(e) && e.level === "CRITICAL") { ... }
  */
 
 // ---------- (d) ----------
@@ -665,8 +664,16 @@ void fetchLots;
  * 【這題在練什麼】教材 4.11 as 不是縮小。
  *
  *   你的答案：
- *   1.舉不出來
- *   2.async function fetchLots(res:unknown): Promise<YarnLot[]>
+ *   1.後端把布卷的 weightKg 從 number 改成字串 "25.50"（例如為了處理小數精度，改用 Decimal 存）。
+ * 有 as 的話，API 那層不會有任何異狀，資料一路流到報表頁，
+ * 直到某一行寫了 roll.weightKg.toFixed(1) 才丟 TypeError: toFixed is not a function。
+ * 你看到的錯誤在報表頁，真正的原因在 API 回應，中間隔了好幾個檔案。
+ * 欄位改名（rollNo → roll_no）更陰險，畫面只會顯示 undefined，連錯誤都不丟。
+ *   2.async function fetchLots(): Promise<YarnLot[]> {
+  const res = await fetch("/api/yarn-lots");
+  const body: unknown = await res.json();
+  return parseYarnLotsResponse(body);
+}
  */
 
 // ============================================================
@@ -714,12 +721,14 @@ void fetchLots;
  *   - 你的型別擋住了 → 5 個 TS2578 全部消失，tsc 歸零
  * 也就是說，這題的評分者就是編譯器本身。
  */
-type ScanResult = {
-  status: "Ok" | "RETRYABLE" | "FATAL";
-  roll?: FabricRoll;
-  errorCode?: string;
-  retryAfterSec?: number;
-};
+type ScanResult =
+  | { status: "OK"; roll: FabricRoll }
+  | {
+      status: "RETRYABLE";
+      errorCode: "TIMEOUT" | "SERVER_BUSY";
+      retryAfterSec: number;
+    }
+  | { status: "FATAL"; errorCode: "NOT_FOUND" | "BARCODE_DAMAGED" };
 
 /**
  * 【你要做的】(b)
@@ -753,7 +762,7 @@ function scanMessage(r: ScanResult): string {
   if (r.status === "FATAL") {
     return `⛔ ${r.errorCode}，請人工處理`;
   }
-  return `✅ ${r.roll}`;
+  return `✅ ${r.roll.rollNo} @ ${r.roll.zoneCode}`;
 }
 
 // ---- Q6 型別驗收（不要改）：這 5 行都應該「是錯誤」，你的型別擋住了，@ts-expect-error 才不會報 TS2578 ----
