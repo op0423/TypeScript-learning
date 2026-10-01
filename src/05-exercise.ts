@@ -60,14 +60,16 @@
  * 看 VS Code 展開的形狀，跟 Equal 右邊的正確答案逐欄比對。
  */
 type Equal<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false;
 type Expect<T extends true> = T;
 
 // ============================================================
 // 共用資料
 // ============================================================
 
-type RollStatus = 'IN_STOCK' | 'SHIPPED' | 'HOLD';
+type RollStatus = "IN_STOCK" | "SHIPPED" | "HOLD";
 
 interface FabricRoll {
   _id: string;
@@ -109,23 +111,33 @@ interface FabricRoll {
  *   也不該被改），哪一種寫法會「自動」讓它變成可以改？那一種就是比較危險的寫法。
  *   把你的選擇和理由寫在這裡：
  *
- *   我選：
- *   理由：
+ *   我選：用pick選取能更改的欄位候用Partiale將這幾個改成選填
+ *   理由：因為如果用了omit,那之後FabricRoll多了欄位則omit也會跟著多出來
  *
  * 【這題在練什麼】教材 5.1 Partial、5.2 Pick / Omit 怎麼選。
  */
-type RollPatch = unknown; // TODO(Q1a)
+type RollPatch = Partial<
+  Pick<FabricRoll, "weightKg" | "zoneCode" | "status" | "remark">
+>; // TODO(Q1a)
 
 // ---- Q1 型別驗收（不要改）----
 type _q1a = Expect<
-  Equal<RollPatch, { weightKg?: number; zoneCode?: string; status?: RollStatus; remark?: string }>
+  Equal<
+    RollPatch,
+    {
+      weightKg?: number;
+      zoneCode?: string;
+      status?: RollStatus;
+      remark?: string;
+    }
+  >
 >;
 // @ts-expect-error _id 不能改
-const q1bad1: RollPatch = { _id: 'X' };
+const q1bad1: RollPatch = { _id: "X" };
 // @ts-expect-error rollNo 不能改
-const q1bad2: RollPatch = { rollNo: 'R999' };
+const q1bad2: RollPatch = { rollNo: "R999" };
 // @ts-expect-error status 只能是三種之一
-const q1bad3: RollPatch = { status: 'LOST' };
+const q1bad3: RollPatch = { status: "LOST" };
 void [q1bad1, q1bad2, q1bad3];
 
 /**
@@ -162,7 +174,13 @@ void [q1bad1, q1bad2, q1bad3];
  * 【這題在練什麼】教材 5.1 Partial 陷阱 1，以及第 1 章的 ??。
  */
 function applyPatch(roll: Readonly<FabricRoll>, patch: RollPatch): FabricRoll {
-  throw new Error('TODO');
+  return {
+    ...roll,
+    weightKg: patch.weightKg ?? patch.weightKg,
+    zoneCode: patch.zoneCode ?? patch.zoneCode,
+    status: patch.status ?? patch.status,
+    remark: patch.remark ?? patch.remark,
+  };
 }
 
 /**
@@ -175,16 +193,16 @@ function applyPatch(roll: Readonly<FabricRoll>, patch: RollPatch): FabricRoll {
  *    打開它有什麼代價？
  *
  *   你的答案：
- *   1. (i)
- *      (ii)
- *   2.
+ *   1. (i)applyPatch(roll, { weightKg: undefined ),會在執行後某一地方跳TypeError
+ *      (ii)因為會把選填欄位當成可能是不存在,並不會考慮存在但值是undefined
+ *   2.在 tsconfig 開 "exactOptionalPropertyTypes": true,會影響整個專案，很多第三方型別會跟著報錯，所以不是每個團隊都開。
  */
 
 // ============================================================
 // Q2 — Pick / Omit：紗線批次的 DTO
 // ============================================================
 
-type YarnType = 'COTTON' | 'POLYESTER' | 'NYLON';
+type YarnType = "COTTON" | "POLYESTER" | "NYLON";
 
 interface YarnLot {
   _id: string;
@@ -225,22 +243,42 @@ interface YarnLot {
  *
  * 【這題在練什麼】教材 5.2 Pick / Omit、Omit 不檢查拼字、StrictOmit。
  */
-type StrictOmit<T, K extends PropertyKey> = unknown; // TODO(Q2a-1)
-type CreateYarnLotInput = unknown; // TODO(Q2a-2)
-type YarnLotPublic = unknown; // TODO(Q2a-3)
+type StrictOmit<T, K extends keyof T> = Omit<T, K>; // TODO(Q2a-1)
+type CreateYarnLotInput = StrictOmit<
+  YarnLot,
+  "_id" | "createdAt" | "updatedAt"
+>; // TODO(Q2a-2)
+type YarnLotPublic = Pick<
+  YarnLot,
+  "lotNo" | "yarnType" | "weightKg" | "supplierNo"
+>; // TODO(Q2a-3)
 
 // ---- Q2 型別驗收（不要改）----
 type _q2a2 = Expect<
   Equal<
     CreateYarnLotInput,
-    { lotNo: string; yarnType: YarnType; weightKg: number; supplierNo: string | null; unitCost: number }
+    {
+      lotNo: string;
+      yarnType: YarnType;
+      weightKg: number;
+      supplierNo: string | null;
+      unitCost: number;
+    }
   >
 >;
 type _q2a3 = Expect<
-  Equal<YarnLotPublic, { lotNo: string; yarnType: YarnType; weightKg: number; supplierNo: string | null }>
+  Equal<
+    YarnLotPublic,
+    {
+      lotNo: string;
+      yarnType: YarnType;
+      weightKg: number;
+      supplierNo: string | null;
+    }
+  >
 >;
 // @ts-expect-error createAt 少了 d，StrictOmit 必須抓到
-type _q2typo = StrictOmit<YarnLot, 'createAt'>;
+type _q2typo = StrictOmit<YarnLot, "createAt">;
 
 /**
  * 【你要做的】(b)
@@ -264,7 +302,7 @@ type _q2typo = StrictOmit<YarnLot, 'createAt'>;
  * 【這題在練什麼】教材 5.2 陷阱 3：Pick 只管型別，不會真的把欄位拿掉。
  */
 function toPublic(lot: YarnLot): YarnLotPublic {
-  throw new Error('TODO');
+  throw new Error("TODO");
 }
 
 /**
@@ -291,7 +329,7 @@ function toPublic(lot: YarnLot): YarnLotPublic {
  *
  * 下面這個陣列就是唯一的資料來源（題目給的，不要改）：
  */
-const MACHINE_STATES = ['RUNNING', 'IDLE', 'DOWN', 'MAINTENANCE'] as const;
+const MACHINE_STATES = ["RUNNING", "IDLE", "DOWN", "MAINTENANCE"] as const;
 
 /**
  * 【你要做的】(a) 寫型別
@@ -322,7 +360,7 @@ type MachineState = string; // TODO(Q3a)
  */
 interface StateMeta {
   label: string;
-  color: 'green' | 'gray' | 'red' | 'amber';
+  color: "green" | "gray" | "red" | "amber";
 }
 
 const STATE_META: Record<MachineState, StateMeta> = {
@@ -345,7 +383,7 @@ const STATE_META: Record<MachineState, StateMeta> = {
  *   請寫「做完 (a) 之後」的版本，不需要處理 undefined。
  */
 function stateBadge(s: MachineState): string {
-  throw new Error('TODO');
+  throw new Error("TODO");
 }
 
 /**
@@ -369,7 +407,7 @@ function stateBadge(s: MachineState): string {
  * 【這題在練什麼】教材 5.6 readonly tuple 的 includes 陷阱，以及第 4 章型別守衛。
  */
 function isMachineState(x: unknown): x is MachineState {
-  throw new Error('TODO');
+  throw new Error("TODO");
 }
 
 /**
@@ -396,12 +434,16 @@ function isMachineState(x: unknown): x is MachineState {
  *
  * 【這題在練什麼】教材 5.3 Record<聯合, V> 的兩個保證：窮舉 + 讀取不會是 undefined。
  */
-function countStates(machines: readonly { machineNo: string; state: MachineState }[]): Record<MachineState, number> {
-  throw new Error('TODO');
+function countStates(
+  machines: readonly { machineNo: string; state: MachineState }[],
+): Record<MachineState, number> {
+  throw new Error("TODO");
 }
 
 // ---- Q3 型別驗收（不要改）----
-type _q3a = Expect<Equal<MachineState, 'RUNNING' | 'IDLE' | 'DOWN' | 'MAINTENANCE'>>;
+type _q3a = Expect<
+  Equal<MachineState, "RUNNING" | "IDLE" | "DOWN" | "MAINTENANCE">
+>;
 // @ts-expect-error STATE_META 沒有 BROKEN 這個狀態
 void STATE_META.BROKEN;
 
@@ -417,7 +459,7 @@ void STATE_META.BROKEN;
 interface MachineSpec {
   maxRpm: number;
   gauge: 18 | 24 | 28; // 針距（每英吋針數）
-  zone: 'A' | 'B';
+  zone: "A" | "B";
 }
 
 /**
@@ -433,17 +475,17 @@ interface MachineSpec {
  * 【這題在練什麼】教材 5.7 satisfies。
  */
 const MACHINES: Record<string, MachineSpec> = {
-  'K-01': { maxRpm: 900, gauge: 28, zone: 'A' },
-  'K-02': { maxRpm: 850, gauge: 24, zone: 'A' },
-  'K-03': { maxRpm: 780, gauge: 18, zone: 'B' },
+  "K-01": { maxRpm: 900, gauge: 28, zone: "A" },
+  "K-02": { maxRpm: 850, gauge: 24, zone: "A" },
+  "K-03": { maxRpm: 780, gauge: 18, zone: "B" },
 };
 
 type MachineNo = keyof typeof MACHINES; // 這行不要改，它會隨著你 (a) 的寫法自動變
 
 // ---- Q4 型別驗收（不要改）----
-type _q4a = Expect<Equal<MachineNo, 'K-01' | 'K-02' | 'K-03'>>;
+type _q4a = Expect<Equal<MachineNo, "K-01" | "K-02" | "K-03">>;
 // @ts-expect-error 沒有 K-99 這台
-const q4bad: MachineNo = 'K-99';
+const q4bad: MachineNo = "K-99";
 void q4bad;
 
 /**
@@ -469,7 +511,7 @@ void q4bad;
  * - 注意「一行最多一個 ||」的老規則，範圍檢查拆成兩個 if 也可以。
  */
 function targetRpm(no: MachineNo, loadRate: number): number {
-  throw new Error('TODO');
+  throw new Error("TODO");
 }
 
 /**
@@ -490,8 +532,8 @@ function targetRpm(no: MachineNo, loadRate: number): number {
  *
  * 【這題在練什麼】教材 5.7 Object.keys 為什麼是 string[]，以及第 4 章型別守衛 + filter。
  */
-function machinesInZone(zone: MachineSpec['zone']): MachineNo[] {
-  throw new Error('TODO');
+function machinesInZone(zone: MachineSpec["zone"]): MachineNo[] {
+  throw new Error("TODO");
 }
 
 /**
@@ -526,13 +568,18 @@ function machinesInZone(zone: MachineSpec['zone']): MachineNo[] {
  * 你要在其他檔案用到它們的各個部分，但原作者沒有把那些型別 export 出來。
  * 手抄一份很危險（原作者改了你不會知道），所以全部要「推導」。
  */
-type StopReason = 'NEEDLE_BREAK' | 'YARN_OUT' | 'MAINTENANCE';
+type StopReason = "NEEDLE_BREAK" | "YARN_OUT" | "MAINTENANCE";
 
 type MachineEvent =
-  | { type: 'RUN'; machineNo: string; rpm: number }
-  | { type: 'STOP'; machineNo: string; reason: StopReason }
-  | { type: 'ROLL_DOFF'; machineNo: string; rollNo: string; weightKg: number }
-  | { type: 'ALARM'; machineNo: string; level: 'WARN' | 'CRITICAL'; message: string };
+  | { type: "RUN"; machineNo: string; rpm: number }
+  | { type: "STOP"; machineNo: string; reason: StopReason }
+  | { type: "ROLL_DOFF"; machineNo: string; rollNo: string; weightKg: number }
+  | {
+      type: "ALARM";
+      machineNo: string;
+      level: "WARN" | "CRITICAL";
+      message: string;
+    };
 
 async function fetchDowntimeReport(
   machineNo: string,
@@ -541,7 +588,7 @@ async function fetchDowntimeReport(
 ) {
   const stops: { reason: StopReason; minutes: number; at: string }[] = [];
   if (opts?.includeMaintenance === true) {
-    stops.push({ reason: 'MAINTENANCE', minutes: 60, at: range.from });
+    stops.push({ reason: "MAINTENANCE", minutes: 60, at: range.from });
   }
   return {
     machineNo,
@@ -589,15 +636,23 @@ type DowntimeStop = unknown; // TODO(Q5f)
 type ReportOptions = unknown; // TODO(Q5g)
 
 // ---- Q5 型別驗收（不要改）----
-type _q5a = Expect<Equal<EventType, 'RUN' | 'STOP' | 'ROLL_DOFF' | 'ALARM'>>;
+type _q5a = Expect<Equal<EventType, "RUN" | "STOP" | "ROLL_DOFF" | "ALARM">>;
 type _q5b = Expect<
-  Equal<AlarmEvent, { type: 'ALARM'; machineNo: string; level: 'WARN' | 'CRITICAL'; message: string }>
+  Equal<
+    AlarmEvent,
+    {
+      type: "ALARM";
+      machineNo: string;
+      level: "WARN" | "CRITICAL";
+      message: string;
+    }
+  >
 >;
 type _q5c = Expect<
   Equal<
     ProductionEvent,
-    | { type: 'RUN'; machineNo: string; rpm: number }
-    | { type: 'ROLL_DOFF'; machineNo: string; rollNo: string; weightKg: number }
+    | { type: "RUN"; machineNo: string; rpm: number }
+    | { type: "ROLL_DOFF"; machineNo: string; rollNo: string; weightKg: number }
   >
 >;
 type _q5d = Expect<
@@ -612,7 +667,9 @@ type _q5d = Expect<
   >
 >;
 type _q5e = Expect<Equal<DateRange, { from: string; to: string }>>;
-type _q5f = Expect<Equal<DowntimeStop, { reason: StopReason; minutes: number; at: string }>>;
+type _q5f = Expect<
+  Equal<DowntimeStop, { reason: StopReason; minutes: number; at: string }>
+>;
 type _q5g = Expect<Equal<ReportOptions, { includeMaintenance: boolean }>>;
 
 /**
@@ -636,7 +693,7 @@ type _q5g = Expect<Equal<ReportOptions, { includeMaintenance: boolean }>>;
  * - 用 reduce 或 for...of 都可以。「同分取前面」只跟你用 > 還是 >= 有關。
  */
 function longestStop(report: DowntimeReport): DowntimeStop | undefined {
-  throw new Error('TODO');
+  throw new Error("TODO");
 }
 
 // ============================================================
@@ -682,15 +739,25 @@ type FormErrors<T> = unknown; // TODO(Q6a)
 
 // ---- Q6 型別驗收（不要改）----
 type _q6a1 = Expect<
-  Equal<FormValues<ReceiveInput>, { lotNo: string; weightKg: string; cones: string; remark: string }>
+  Equal<
+    FormValues<ReceiveInput>,
+    { lotNo: string; weightKg: string; cones: string; remark: string }
+  >
 >;
 type _q6a2 = Expect<
-  Equal<FormErrors<ReceiveInput>, { lotNo?: string; weightKg?: string; cones?: string; remark?: string }>
+  Equal<
+    FormErrors<ReceiveInput>,
+    { lotNo?: string; weightKg?: string; cones?: string; remark?: string }
+  >
 >;
 // @ts-expect-error remark 在表單裡是必填（沒填是 ''，不是不存在）
-const q6bad1: FormValues<ReceiveInput> = { lotNo: 'Y-1', weightKg: '1', cones: '2' };
+const q6bad1: FormValues<ReceiveInput> = {
+  lotNo: "Y-1",
+  weightKg: "1",
+  cones: "2",
+};
 // @ts-expect-error 錯誤訊息的 key 必須是真的欄位名
-const q6bad2: FormErrors<ReceiveInput> = { lotNoo: '必填' };
+const q6bad2: FormErrors<ReceiveInput> = { lotNoo: "必填" };
 void [q6bad1, q6bad2];
 
 /**
@@ -734,10 +801,12 @@ void [q6bad1, q6bad2];
  *
  * 【這題在練什麼】教材 5.8 mapped type 的實際用途 + 第 4 章可辨識聯合 + 第 1 章 falsy。
  */
-type ParseResult = { ok: true; data: ReceiveInput } | { ok: false; errors: FormErrors<ReceiveInput> };
+type ParseResult =
+  | { ok: true; data: ReceiveInput }
+  | { ok: false; errors: FormErrors<ReceiveInput> };
 
 function parseReceiveForm(values: FormValues<ReceiveInput>): ParseResult {
-  throw new Error('TODO');
+  throw new Error("TODO");
 }
 
 // ============================================================
@@ -751,10 +820,10 @@ function parseReceiveForm(values: FormValues<ReceiveInput>): ParseResult {
  */
 
 // ---------- (a) ----------
-type DraftEventBad = Omit<MachineEvent, 'machineNo'>;
+type DraftEventBad = Omit<MachineEvent, "machineNo">;
 
 function describeDraft(d: DraftEventBad): string {
-  if (d.type === 'RUN') {
+  if (d.type === "RUN") {
     // @ts-expect-error 刪掉這行指令，讀錯誤訊息
     return `轉速 ${d.rpm}`;
   }
@@ -813,9 +882,9 @@ void previewSlowDown;
 
 // ---------- (c) ----------
 enum ShiftEnum {
-  A = 'A',
-  B = 'B',
-  C = 'C',
+  A = "A",
+  B = "B",
+  C = "C",
 }
 
 function shiftLabel(s: ShiftEnum): string {
@@ -824,7 +893,7 @@ function shiftLabel(s: ShiftEnum): string {
 
 // 班別是從 API 回來的字串
 // @ts-expect-error 刪掉這行指令，讀錯誤訊息
-shiftLabel('B');
+shiftLabel("B");
 void shiftLabel;
 /**
  * 【要回答的】
@@ -850,14 +919,16 @@ void shiftLabel;
 const results = { pass: 0, fail: 0, todo: 0 };
 
 function isTodo(e: unknown): boolean {
-  return e instanceof Error && e.message === 'TODO';
+  return e instanceof Error && e.message === "TODO";
 }
 
 /** 把物件的 key 排序後再轉 JSON，所以你回傳的物件 key 順序不影響比對 */
 function stable(v: unknown): string | undefined {
   return JSON.stringify(v, (_key, val: unknown) => {
-    if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
-      return Object.fromEntries(Object.entries(val).sort(([a], [b]) => a.localeCompare(b)));
+    if (val !== null && typeof val === "object" && !Array.isArray(val)) {
+      return Object.fromEntries(
+        Object.entries(val).sort(([a], [b]) => a.localeCompare(b)),
+      );
     }
     return val;
   });
@@ -871,7 +942,9 @@ function check(label: string, run: () => unknown, expected: unknown): void {
       console.log(`✅ ${label}`);
     } else {
       results.fail++;
-      console.log(`❌ ${label}\n     預期 ${stable(expected)}\n     實際 ${stable(actual)}`);
+      console.log(
+        `❌ ${label}\n     預期 ${stable(expected)}\n     實際 ${stable(actual)}`,
+      );
     }
   } catch (e) {
     if (isTodo(e)) {
@@ -880,15 +953,23 @@ function check(label: string, run: () => unknown, expected: unknown): void {
       return;
     }
     results.fail++;
-    console.log(`❌ ${label}\n     丟出例外：${e instanceof Error ? e.message : String(e)}`);
+    console.log(
+      `❌ ${label}\n     丟出例外：${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 }
 
-function checkThrows(label: string, run: () => unknown, expectedMessage: string): void {
+function checkThrows(
+  label: string,
+  run: () => unknown,
+  expectedMessage: string,
+): void {
   try {
     const actual = run();
     results.fail++;
-    console.log(`❌ ${label}\n     預期丟出「${expectedMessage}」，實際回傳 ${stable(actual)}`);
+    console.log(
+      `❌ ${label}\n     預期丟出「${expectedMessage}」，實際回傳 ${stable(actual)}`,
+    );
   } catch (e) {
     if (isTodo(e)) {
       results.todo++;
@@ -901,144 +982,241 @@ function checkThrows(label: string, run: () => unknown, expectedMessage: string)
       console.log(`✅ ${label}`);
     } else {
       results.fail++;
-      console.log(`❌ ${label}\n     預期訊息「${expectedMessage}」\n     實際訊息「${msg}」`);
+      console.log(
+        `❌ ${label}\n     預期訊息「${expectedMessage}」\n     實際訊息「${msg}」`,
+      );
     }
   }
 }
 
-console.log('\n===== Q1 =====');
+console.log("\n===== Q1 =====");
 const R001: FabricRoll = {
-  _id: '1',
-  rollNo: 'R001',
+  _id: "1",
+  rollNo: "R001",
   weightKg: 25.5,
-  zoneCode: 'A-01',
-  status: 'IN_STOCK',
-  createdAt: '2026-09-30T08:00:00Z',
+  zoneCode: "A-01",
+  status: "IN_STOCK",
+  createdAt: "2026-09-30T08:00:00Z",
 };
-const R002: FabricRoll = { ...R001, _id: '2', rollNo: 'R002', remark: '瑕疵' };
-check('Q1b 改區域', () => applyPatch(R001, { zoneCode: 'B-03' }), { ...R001, zoneCode: 'B-03' });
-check('Q1b weightKg: undefined 要忽略', () => applyPatch(R001, { weightKg: undefined }).weightKg, 25.5);
-check('Q1b weightKg: 0 要保留', () => applyPatch(R001, { weightKg: 0 }).weightKg, 0);
-check('Q1b 空 patch 內容不變', () => applyPatch(R001, {}), R001);
-check('Q1b 回傳新物件', () => applyPatch(R001, {}) !== R001, true);
+const R002: FabricRoll = { ...R001, _id: "2", rollNo: "R002", remark: "瑕疵" };
+check("Q1b 改區域", () => applyPatch(R001, { zoneCode: "B-03" }), {
+  ...R001,
+  zoneCode: "B-03",
+});
 check(
-  'Q1b 不可修改原物件',
+  "Q1b weightKg: undefined 要忽略",
+  () => applyPatch(R001, { weightKg: undefined }).weightKg,
+  25.5,
+);
+check(
+  "Q1b weightKg: 0 要保留",
+  () => applyPatch(R001, { weightKg: 0 }).weightKg,
+  0,
+);
+check("Q1b 空 patch 內容不變", () => applyPatch(R001, {}), R001);
+check("Q1b 回傳新物件", () => applyPatch(R001, {}) !== R001, true);
+check(
+  "Q1b 不可修改原物件",
   () => {
     const before = JSON.stringify(R001);
-    applyPatch(R001, { status: 'HOLD', weightKg: 1 });
+    applyPatch(R001, { status: "HOLD", weightKg: 1 });
     return JSON.stringify(R001) === before;
   },
   true,
 );
-check('Q1b remark: undefined 不清掉', () => applyPatch(R002, { remark: undefined }).remark, '瑕疵');
-check("Q1b remark: '' 要清空", () => applyPatch(R002, { remark: '' }).remark, '');
-checkThrows('Q1b 負重量', () => applyPatch(R001, { weightKg: -1 }), '重量不可為負數');
-
-console.log('\n===== Q2 =====');
-const lotY001: YarnLot = {
-  _id: '1',
-  lotNo: 'Y-001',
-  yarnType: 'COTTON',
-  weightKg: 50,
-  supplierNo: 'S-12',
-  unitCost: 86.5,
-  createdAt: '2026-09-30T08:00:00Z',
-  updatedAt: '2026-09-30T08:00:00Z',
-};
-check('Q2b 只有四個欄位', () => toPublic(lotY001), {
-  lotNo: 'Y-001',
-  yarnType: 'COTTON',
-  weightKg: 50,
-  supplierNo: 'S-12',
-});
-check('Q2b 沒有 unitCost', () => String(stable(toPublic(lotY001))).includes('unitCost'), false);
-check('Q2b supplierNo 為 null', () => toPublic({ ...lotY001, supplierNo: null }), {
-  lotNo: 'Y-001',
-  yarnType: 'COTTON',
-  weightKg: 50,
-  supplierNo: null,
-});
-
-console.log('\n===== Q3 =====');
-check('Q3c RUNNING', () => stateBadge('RUNNING'), '運轉（green）');
-check('Q3c IDLE', () => stateBadge('IDLE'), '待機（gray）');
-check('Q3c DOWN', () => stateBadge('DOWN'), '故障（red）');
-check('Q3c MAINTENANCE', () => stateBadge('MAINTENANCE'), '保養（amber）');
-check('Q3d IDLE', () => isMachineState('IDLE'), true);
-check('Q3d MAINTENANCE', () => isMachineState('MAINTENANCE'), true);
-check('Q3d 小寫 idle', () => isMachineState('idle'), false);
-check('Q3d null', () => isMachineState(null), false);
-check('Q3d 數字', () => isMachineState(3), false);
 check(
-  'Q3e 統計',
+  "Q1b remark: undefined 不清掉",
+  () => applyPatch(R002, { remark: undefined }).remark,
+  "瑕疵",
+);
+check(
+  "Q1b remark: '' 要清空",
+  () => applyPatch(R002, { remark: "" }).remark,
+  "",
+);
+checkThrows(
+  "Q1b 負重量",
+  () => applyPatch(R001, { weightKg: -1 }),
+  "重量不可為負數",
+);
+
+console.log("\n===== Q2 =====");
+const lotY001: YarnLot = {
+  _id: "1",
+  lotNo: "Y-001",
+  yarnType: "COTTON",
+  weightKg: 50,
+  supplierNo: "S-12",
+  unitCost: 86.5,
+  createdAt: "2026-09-30T08:00:00Z",
+  updatedAt: "2026-09-30T08:00:00Z",
+};
+check("Q2b 只有四個欄位", () => toPublic(lotY001), {
+  lotNo: "Y-001",
+  yarnType: "COTTON",
+  weightKg: 50,
+  supplierNo: "S-12",
+});
+check(
+  "Q2b 沒有 unitCost",
+  () => String(stable(toPublic(lotY001))).includes("unitCost"),
+  false,
+);
+check(
+  "Q2b supplierNo 為 null",
+  () => toPublic({ ...lotY001, supplierNo: null }),
+  {
+    lotNo: "Y-001",
+    yarnType: "COTTON",
+    weightKg: 50,
+    supplierNo: null,
+  },
+);
+
+console.log("\n===== Q3 =====");
+check("Q3c RUNNING", () => stateBadge("RUNNING"), "運轉（green）");
+check("Q3c IDLE", () => stateBadge("IDLE"), "待機（gray）");
+check("Q3c DOWN", () => stateBadge("DOWN"), "故障（red）");
+check("Q3c MAINTENANCE", () => stateBadge("MAINTENANCE"), "保養（amber）");
+check("Q3d IDLE", () => isMachineState("IDLE"), true);
+check("Q3d MAINTENANCE", () => isMachineState("MAINTENANCE"), true);
+check("Q3d 小寫 idle", () => isMachineState("idle"), false);
+check("Q3d null", () => isMachineState(null), false);
+check("Q3d 數字", () => isMachineState(3), false);
+check(
+  "Q3e 統計",
   () =>
     countStates([
-      { machineNo: 'K-01', state: 'RUNNING' },
-      { machineNo: 'K-02', state: 'DOWN' },
-      { machineNo: 'K-03', state: 'RUNNING' },
+      { machineNo: "K-01", state: "RUNNING" },
+      { machineNo: "K-02", state: "DOWN" },
+      { machineNo: "K-03", state: "RUNNING" },
     ]),
   { RUNNING: 2, IDLE: 0, DOWN: 1, MAINTENANCE: 0 },
 );
-check('Q3e 空陣列四個 0', () => countStates([]), { RUNNING: 0, IDLE: 0, DOWN: 0, MAINTENANCE: 0 });
+check("Q3e 空陣列四個 0", () => countStates([]), {
+  RUNNING: 0,
+  IDLE: 0,
+  DOWN: 0,
+  MAINTENANCE: 0,
+});
 
-console.log('\n===== Q4 =====');
-check('Q4b K-01 0.8', () => targetRpm('K-01', 0.8), 720);
-check('Q4b K-03 1', () => targetRpm('K-03', 1), 780);
-check('Q4b K-02 0.333', () => targetRpm('K-02', 0.333), 283);
-check('Q4b 負載率 0', () => targetRpm('K-01', 0), 0);
-checkThrows('Q4b 負載率 1.2', () => targetRpm('K-01', 1.2), '負載率需介於 0 到 1');
-checkThrows('Q4b 負載率 -0.1', () => targetRpm('K-01', -0.1), '負載率需介於 0 到 1');
-check('Q4c A 區', () => machinesInZone('A'), ['K-01', 'K-02']);
-check('Q4c B 區', () => machinesInZone('B'), ['K-03']);
+console.log("\n===== Q4 =====");
+check("Q4b K-01 0.8", () => targetRpm("K-01", 0.8), 720);
+check("Q4b K-03 1", () => targetRpm("K-03", 1), 780);
+check("Q4b K-02 0.333", () => targetRpm("K-02", 0.333), 283);
+check("Q4b 負載率 0", () => targetRpm("K-01", 0), 0);
+checkThrows(
+  "Q4b 負載率 1.2",
+  () => targetRpm("K-01", 1.2),
+  "負載率需介於 0 到 1",
+);
+checkThrows(
+  "Q4b 負載率 -0.1",
+  () => targetRpm("K-01", -0.1),
+  "負載率需介於 0 到 1",
+);
+check("Q4c A 區", () => machinesInZone("A"), ["K-01", "K-02"]);
+check("Q4c B 區", () => machinesInZone("B"), ["K-03"]);
 
-console.log('\n===== Q5 =====');
+console.log("\n===== Q5 =====");
 const report = {
-  machineNo: 'K-01',
-  range: { from: '2026-09-30', to: '2026-09-30' },
+  machineNo: "K-01",
+  range: { from: "2026-09-30", to: "2026-09-30" },
   totalMinutes: 120,
   stops: [
-    { reason: 'YARN_OUT' as const, minutes: 30, at: '08:00' },
-    { reason: 'NEEDLE_BREAK' as const, minutes: 45, at: '10:00' },
-    { reason: 'MAINTENANCE' as const, minutes: 45, at: '13:00' },
+    { reason: "YARN_OUT" as const, minutes: 30, at: "08:00" },
+    { reason: "NEEDLE_BREAK" as const, minutes: 45, at: "10:00" },
+    { reason: "MAINTENANCE" as const, minutes: 45, at: "13:00" },
   ],
 };
-check('Q5h 最長（同分取前面）', () => longestStop(report), {
-  reason: 'NEEDLE_BREAK',
+check("Q5h 最長（同分取前面）", () => longestStop(report), {
+  reason: "NEEDLE_BREAK",
   minutes: 45,
-  at: '10:00',
+  at: "10:00",
 });
-check('Q5h 空陣列', () => longestStop({ ...report, stops: [] }), undefined);
+check("Q5h 空陣列", () => longestStop({ ...report, stops: [] }), undefined);
 
-console.log('\n===== Q6 =====');
-check('Q6b 成功、remark 空白', () => parseReceiveForm({ lotNo: ' Y-001 ', weightKg: '50.5', cones: '12', remark: '' }), {
-  ok: true,
-  data: { lotNo: 'Y-001', weightKg: 50.5, cones: 12 },
-});
+console.log("\n===== Q6 =====");
 check(
-  'Q6b remark 空白時不能有 remark key',
+  "Q6b 成功、remark 空白",
+  () =>
+    parseReceiveForm({
+      lotNo: " Y-001 ",
+      weightKg: "50.5",
+      cones: "12",
+      remark: "",
+    }),
+  {
+    ok: true,
+    data: { lotNo: "Y-001", weightKg: 50.5, cones: 12 },
+  },
+);
+check(
+  "Q6b remark 空白時不能有 remark key",
   () => {
-    const r = parseReceiveForm({ lotNo: 'Y-001', weightKg: '50.5', cones: '12', remark: '   ' });
-    return r.ok ? 'remark' in r.data : 'ok 是 false';
+    const r = parseReceiveForm({
+      lotNo: "Y-001",
+      weightKg: "50.5",
+      cones: "12",
+      remark: "   ",
+    });
+    return r.ok ? "remark" in r.data : "ok 是 false";
   },
   false,
 );
-check('Q6b 成功、有 remark', () => parseReceiveForm({ lotNo: 'Y-002', weightKg: '20', cones: '4', remark: ' 急件 ' }), {
-  ok: true,
-  data: { lotNo: 'Y-002', weightKg: 20, cones: 4, remark: '急件' },
-});
-check('Q6b 三個欄位都錯', () => parseReceiveForm({ lotNo: '', weightKg: 'abc', cones: '2.5', remark: '' }), {
-  ok: false,
-  errors: { lotNo: '必填', weightKg: '重量需為正數', cones: '筒數需為正整數' },
-});
-check('Q6b 空白重量是必填', () => parseReceiveForm({ lotNo: 'Y-003', weightKg: '  ', cones: '0', remark: '' }), {
-  ok: false,
-  errors: { weightKg: '必填', cones: '筒數需為正整數' },
-});
-check('Q6b 重量 0、筒數空白', () => parseReceiveForm({ lotNo: 'Y-004', weightKg: '0', cones: '', remark: '' }), {
-  ok: false,
-  errors: { weightKg: '重量需為正數', cones: '必填' },
-});
+check(
+  "Q6b 成功、有 remark",
+  () =>
+    parseReceiveForm({
+      lotNo: "Y-002",
+      weightKg: "20",
+      cones: "4",
+      remark: " 急件 ",
+    }),
+  {
+    ok: true,
+    data: { lotNo: "Y-002", weightKg: 20, cones: 4, remark: "急件" },
+  },
+);
+check(
+  "Q6b 三個欄位都錯",
+  () =>
+    parseReceiveForm({ lotNo: "", weightKg: "abc", cones: "2.5", remark: "" }),
+  {
+    ok: false,
+    errors: {
+      lotNo: "必填",
+      weightKg: "重量需為正數",
+      cones: "筒數需為正整數",
+    },
+  },
+);
+check(
+  "Q6b 空白重量是必填",
+  () =>
+    parseReceiveForm({
+      lotNo: "Y-003",
+      weightKg: "  ",
+      cones: "0",
+      remark: "",
+    }),
+  {
+    ok: false,
+    errors: { weightKg: "必填", cones: "筒數需為正整數" },
+  },
+);
+check(
+  "Q6b 重量 0、筒數空白",
+  () =>
+    parseReceiveForm({ lotNo: "Y-004", weightKg: "0", cones: "", remark: "" }),
+  {
+    ok: false,
+    errors: { weightKg: "重量需為正數", cones: "必填" },
+  },
+);
 
-console.log(`\n結果：✅ ${results.pass}　❌ ${results.fail}　⬜ ${results.todo}`);
+console.log(
+  `\n結果：✅ ${results.pass}　❌ ${results.fail}　⬜ ${results.todo}`,
+);
 
 export {};
