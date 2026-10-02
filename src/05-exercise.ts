@@ -302,7 +302,12 @@ type _q2typo = StrictOmit<YarnLot, "createAt">;
  * 【這題在練什麼】教材 5.2 陷阱 3：Pick 只管型別，不會真的把欄位拿掉。
  */
 function toPublic(lot: YarnLot): YarnLotPublic {
-  throw new Error("TODO");
+  return {
+    lotNo: lot.lotNo,
+    yarnType: lot.yarnType,
+    weightKg: lot.weightKg,
+    supplierNo: lot.supplierNo,
+  };
 }
 
 /**
@@ -314,8 +319,10 @@ function toPublic(lot: YarnLot): YarnLotPublic {
  *    所以「對外公開的型別」應該用哪一種？
  *
  *   你的答案：
- *   1.
- *   2.
+ *   1.因為YarnLot的欄位比YarnLotPublic多,而TS的結構型別系統針對多欄位物件指派給欄位較少的物件,多餘的欄位會被TS當作是正常的而不是undefined
+ *   2.如果加了supplierPric之後,StrictOmit因為是排除指定元素,
+ *    所以會一併回傳supplierPric回來,Pick則是指定元素,所以並不會回傳supplierPric回來因為當初並未指定該元素
+ *    所以對外公開的型別應用pick
  */
 
 // ============================================================
@@ -340,7 +347,7 @@ const MACHINE_STATES = ["RUNNING", "IDLE", "DOWN", "MAINTENANCE"] as const;
  *
  * 【這題在練什麼】教材 5.6「從值推出聯合型別」。
  */
-type MachineState = string; // TODO(Q3a)
+type MachineState = (typeof MACHINE_STATES)[number]; // TODO(Q3a)
 
 /**
  * 【你要做的】(b) 填對照表
@@ -364,6 +371,10 @@ interface StateMeta {
 }
 
 const STATE_META: Record<MachineState, StateMeta> = {
+  RUNNING: { label: "運轉", color: "green" },
+  IDLE: { label: "待機", color: "gray" },
+  DOWN: { label: "故障", color: "red" },
+  MAINTENANCE: { label: "保養", color: "amber" },
   // TODO(Q3b)
 };
 
@@ -383,7 +394,8 @@ const STATE_META: Record<MachineState, StateMeta> = {
  *   請寫「做完 (a) 之後」的版本，不需要處理 undefined。
  */
 function stateBadge(s: MachineState): string {
-  throw new Error("TODO");
+  const label = STATE_META[s];
+  return `${label.label} (${label.color})`;
 }
 
 /**
@@ -407,7 +419,10 @@ function stateBadge(s: MachineState): string {
  * 【這題在練什麼】教材 5.6 readonly tuple 的 includes 陷阱，以及第 4 章型別守衛。
  */
 function isMachineState(x: unknown): x is MachineState {
-  throw new Error("TODO");
+  if (typeof x !== "string") return false;
+  if (x === null) return false;
+  if (!Object.hasOwn(MACHINE_STATES, x)) return false;
+  return true;
 }
 
 /**
@@ -437,7 +452,18 @@ function isMachineState(x: unknown): x is MachineState {
 function countStates(
   machines: readonly { machineNo: string; state: MachineState }[],
 ): Record<MachineState, number> {
-  throw new Error("TODO");
+  const result: Record<MachineState, number> = {
+    RUNNING: 0,
+    IDLE: 0,
+    DOWN: 0,
+    MAINTENANCE: 0,
+  };
+  for (const i of machines) {
+    if (Object.hasOwn(result, i.state)) {
+      result[i.state] += 1;
+    }
+  }
+  return result;
 }
 
 // ---- Q3 型別驗收（不要改）----
