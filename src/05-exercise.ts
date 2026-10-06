@@ -500,11 +500,11 @@ interface MachineSpec {
  *
  * 【這題在練什麼】教材 5.7 satisfies。
  */
-const MACHINES: Record<string, MachineSpec> = {
+const MACHINES = {
   "K-01": { maxRpm: 900, gauge: 28, zone: "A" },
   "K-02": { maxRpm: 850, gauge: 24, zone: "A" },
   "K-03": { maxRpm: 780, gauge: 18, zone: "B" },
-};
+} satisfies Record<string, MachineSpec>;
 
 type MachineNo = keyof typeof MACHINES; // 這行不要改，它會隨著你 (a) 的寫法自動變
 
@@ -537,7 +537,8 @@ void q4bad;
  * - 注意「一行最多一個 ||」的老規則，範圍檢查拆成兩個 if 也可以。
  */
 function targetRpm(no: MachineNo, loadRate: number): number {
-  throw new Error("TODO");
+  if (loadRate > 1 || loadRate < 0) throw new Error("負載率需介於 0 到 1");
+  return Math.round(MACHINES[no].maxRpm * loadRate);
 }
 
 /**
@@ -558,8 +559,11 @@ function targetRpm(no: MachineNo, loadRate: number): number {
  *
  * 【這題在練什麼】教材 5.7 Object.keys 為什麼是 string[]，以及第 4 章型別守衛 + filter。
  */
+function isMachineNo(k:string):k is MachineNo{
+  return Object.hasOwn(MACHINES,k);
+}
 function machinesInZone(zone: MachineSpec["zone"]): MachineNo[] {
-  throw new Error("TODO");
+  if(!isMachineNo)return null
 }
 
 /**
@@ -653,9 +657,9 @@ void fetchDowntimeReport;
  *
  * 【這題在練什麼】教材 5.4、5.5 全部。
  */
-type EventType = unknown; // TODO(Q5a)
-type AlarmEvent = unknown; // TODO(Q5b)
-type ProductionEvent = unknown; // TODO(Q5c)
+type EventType = MachineEvent["type"]; // TODO(Q5a)
+type AlarmEvent = Extract<MachineEvent, { type: "ALARM" }>; // TODO(Q5b)
+type ProductionEvent = Exclude<MachineEvent, { type: "STOP"|"ALARM" }>; // TODO(Q5c)
 type DowntimeReport = unknown; // TODO(Q5d)
 type DateRange = unknown; // TODO(Q5e)
 type DowntimeStop = unknown; // TODO(Q5f)
