@@ -559,11 +559,13 @@ function targetRpm(no: MachineNo, loadRate: number): number {
  *
  * 【這題在練什麼】教材 5.7 Object.keys 為什麼是 string[]，以及第 4 章型別守衛 + filter。
  */
-function isMachineNo(k:string):k is MachineNo{
-  return Object.hasOwn(MACHINES,k);
+function isMachineNo(k: string): k is MachineNo {
+  return Object.hasOwn(MACHINES, k);
 }
 function machinesInZone(zone: MachineSpec["zone"]): MachineNo[] {
-  if(!isMachineNo)return null
+  return Object.keys(MACHINES)
+    .filter((r) => isMachineNo(r))
+    .filter((r) => MACHINES[r].zone === zone);
 }
 
 /**
@@ -659,11 +661,11 @@ void fetchDowntimeReport;
  */
 type EventType = MachineEvent["type"]; // TODO(Q5a)
 type AlarmEvent = Extract<MachineEvent, { type: "ALARM" }>; // TODO(Q5b)
-type ProductionEvent = Exclude<MachineEvent, { type: "STOP"|"ALARM" }>; // TODO(Q5c)
-type DowntimeReport = unknown; // TODO(Q5d)
-type DateRange = unknown; // TODO(Q5e)
-type DowntimeStop = unknown; // TODO(Q5f)
-type ReportOptions = unknown; // TODO(Q5g)
+type ProductionEvent = Exclude<MachineEvent, { type: "STOP" | "ALARM" }>; // TODO(Q5c)
+type DowntimeReport = Awaited<ReturnType<typeof fetchDowntimeReport>>; // TODO(Q5d)
+type DateRange = Parameters<typeof fetchDowntimeReport>[1]; // TODO(Q5e)
+type DowntimeStop = DowntimeReport["stops"][number]; // TODO(Q5f)
+type ReportOptions = NonNullable<Parameters<typeof fetchDowntimeReport>[2]>; // TODO(Q5g)
 
 // ---- Q5 型別驗收（不要改）----
 type _q5a = Expect<Equal<EventType, "RUN" | "STOP" | "ROLL_DOFF" | "ALARM">>;
@@ -722,9 +724,7 @@ type _q5g = Expect<Equal<ReportOptions, { includeMaintenance: boolean }>>;
  *   本來就是 DowntimeStop | undefined，好好利用它。
  * - 用 reduce 或 for...of 都可以。「同分取前面」只跟你用 > 還是 >= 有關。
  */
-function longestStop(report: DowntimeReport): DowntimeStop | undefined {
-  throw new Error("TODO");
-}
+function longestStop(report: DowntimeReport): DowntimeStop | undefined {}
 
 // ============================================================
 // Q6 — 自己寫 mapped type：收紗表單
@@ -764,8 +764,8 @@ interface ReceiveInput {
  *
  * 【這題在練什麼】教材 5.8 自己寫 mapped type。
  */
-type FormValues<T> = unknown; // TODO(Q6a)
-type FormErrors<T> = unknown; // TODO(Q6a)
+type FormValues<T> = { [k in keyof T]-?: string }; // TODO(Q6a)-?必填(required)
+type FormErrors<T> = { [k in keyof T]?: string }; // TODO(Q6a)?選填(partial)
 
 // ---- Q6 型別驗收（不要改）----
 type _q6a1 = Expect<
@@ -836,7 +836,29 @@ type ParseResult =
   | { ok: false; errors: FormErrors<ReceiveInput> };
 
 function parseReceiveForm(values: FormValues<ReceiveInput>): ParseResult {
-  throw new Error("TODO");
+  const error: FormErrors<ReceiveInput> = {};
+  if (values["lotNo"].trim() === "") {
+    error.lotNo = "必填";
+  }
+  if (values["weightKg"].trim() === "") {
+    error.weightKg = "必填";
+  }
+  if (Number.isFinite(Number(values["weightKg"])) === false) {
+    error.weightKg = "重量需為正數";
+  }
+  if (Number(values["weightKg"]) <= 0) {
+    error.weightKg = "重量需為正數";
+  }
+  if (values["cones"].trim() === "") {
+    error.cones = "必填";
+  }
+  if (Number.isInteger(Number(values["cones"])) === false) {
+    error.cones = "筒數需為正整數";
+  }
+  if (Number(values["cones"]) <= 0) {
+    error.cones = "筒數需為正整數";
+  }
+  
 }
 
 // ============================================================
