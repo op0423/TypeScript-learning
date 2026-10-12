@@ -182,7 +182,15 @@ function applyPatch(roll: Readonly<FabricRoll>, patch: RollPatch): FabricRoll {
     remark: patch.remark ?? patch.remark,
   };
 }
-
+check("Q1b 改區域", () => applyPatch(R001, { zoneCode: "B-03" }), {
+  ...R001,
+  zoneCode: "B-03",
+});
+check(
+  "Q1b weightKg: undefined 要忽略",
+  () => applyPatch(R001, { weightKg: undefined }).weightKg,
+  25.5,
+);
 /**
  * 【你要做的】(c) 觀念題
  *
@@ -419,9 +427,9 @@ function stateBadge(s: MachineState): string {
  * 【這題在練什麼】教材 5.6 readonly tuple 的 includes 陷阱，以及第 4 章型別守衛。
  */
 function isMachineState(x: unknown): x is MachineState {
-  if (typeof x !== "string") return false;
   if (x === null) return false;
-  if (!Object.hasOwn(MACHINE_STATES, x)) return false;
+  else if (typeof x !== "string") return false;
+  else if (!Object.hasOwn(MACHINE_STATES, x)) return false;
   return true;
 }
 
