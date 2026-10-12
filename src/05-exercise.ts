@@ -395,7 +395,7 @@ const STATE_META: Record<MachineState, StateMeta> = {
  */
 function stateBadge(s: MachineState): string {
   const label = STATE_META[s];
-  return `${label.label} (${label.color})`;
+  return `${label.label} (${label.color}) `;
 }
 
 /**
@@ -837,28 +837,34 @@ type ParseResult =
 
 function parseReceiveForm(values: FormValues<ReceiveInput>): ParseResult {
   const error: FormErrors<ReceiveInput> = {};
+  // const ParseResult:<ReceiveInput>={}
   if (values["lotNo"].trim() === "") {
     error.lotNo = "必填";
   }
+  
   if (values["weightKg"].trim() === "") {
     error.weightKg = "必填";
-  }
-  if (Number.isFinite(Number(values["weightKg"])) === false) {
+  }else if (Number.isFinite(Number(values["weightKg"])) === false) {
+    error.weightKg = "重量需為正數";
+  }else if (Number(values["weightKg"]) <= 0) {
     error.weightKg = "重量需為正數";
   }
-  if (Number(values["weightKg"]) <= 0) {
-    error.weightKg = "重量需為正數";
-  }
+  
+  
   if (values["cones"].trim() === "") {
     error.cones = "必填";
-  }
-  if (Number.isInteger(Number(values["cones"])) === false) {
+  }else if (Number.isInteger(Number(values["cones"])) === false) {
     error.cones = "筒數需為正整數";
-  }
-  if (Number(values["cones"]) <= 0) {
+  }else if (Number(values["cones"]) <= 0) {
     error.cones = "筒數需為正整數";
   }
   
+  if(Object.keys(error).length>0)return {ok:false,errors:error}
+  
+  return {ok:true,data:{"lotNo": values.lotNo.trim(),
+     "weightKg": Number(values["weightKg"]),
+      "cones": Number(values["cones"]),
+      "remark": values.remark.trim() === "" ? undefined : values.remark.trim()}}
 }
 
 // ============================================================
@@ -895,10 +901,10 @@ void describeDraft;
  * 4. 寫出修正後的 DraftEvent 型別（教材 5.2 陷阱 2）。
  *
  *   你的答案：
- *   1.
- *   2.
- *   3.
- *   4.
+ *   1.Property 'rpm' does not exist on type 'DraftEventBad'.ts(2339)
+ *   2.因為Omit中的keyof只會抓A|B都有的欄位,所以rpm、reason 這些欄位都會不見
+ *   3.可辨識聯合的前提是事件型別必須有共同的屬性（discriminant property）
+ *   4.union
  */
 
 // ---------- (b) ----------
@@ -926,12 +932,14 @@ void previewSlowDown;
  *    (ii) 只改參數型別：讓 m.spec.maxRpm = ... 這一行紅字（寫出型別）
  *
  *   你的答案：
- *   1.
- *   2.
- *   3. (i)
- *      (ii)
+ *   1.一樣,都會是720
+ *   2.因為readonly只是宣告此參數為唯讀,在編譯期一樣就會消失了
+ *   3. (i))$set: { 'spec.maxRpm': Math.round(m.spec.maxRpm * 0.8) }
+ *      (ii)function previewSlowDown(m:readonly Readonly<KnitMachine>): number {
+*            m.spec.maxRpm = Math.round(m.spec.maxRpm * 0.8); 
+ *             return m.spec.maxRpm;
+ *           }
  */
-
 // ---------- (c) ----------
 enum ShiftEnum {
   A = "A",
@@ -944,7 +952,7 @@ function shiftLabel(s: ShiftEnum): string {
 }
 
 // 班別是從 API 回來的字串
-// @ts-expect-error 刪掉這行指令，讀錯誤訊息
+
 shiftLabel("B");
 void shiftLabel;
 /**
@@ -959,7 +967,7 @@ void shiftLabel;
  *    讓「API 回來的字串」可以安全地變成 Shift。
  *
  *   你的答案：
- *   1.
+ *   1.Argument of type '"B"' is not assignable to parameter of type 'ShiftEnum'.ts(2345)
  *   2.
  *   3.
  */
